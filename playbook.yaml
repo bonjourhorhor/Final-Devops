@@ -1,0 +1,42 @@
+---
+- name: Web Server Deployment and Testing
+  hosts: webservers
+  become: yes
+  tasks:
+
+    - name: Ensure no local changes before pulling
+      shell: git reset --hard && git clean -fd
+      args:
+        chdir: /app
+
+    - name: Pull latest code from git
+      command: git pull origin main
+      args:
+        chdir: /app
+
+    - name: Install MySQL Client for backup
+      apt:
+        name: default-mysql-client
+        state: present
+        update_cache: yes
+
+    - name: Run Maven tests against SQLite test database
+      command: mvn test -Dspring.profiles.active=test
+      args:
+        chdir: /app
+      register: mvn_test_result
+
+    - name: Display Maven test results
+      debug:
+        var: mvn_test_result.stdout_lines
+
+    - name: Backup MySQL database
+      command: sh -c 'mysqldump -h mysql-db -u root -p"Hello@123" I4B-LUY_Lyhor-db > /app/backup.sql'
+      args:
+        chdir: /app
+
+    - name: Fetch backup.sql to local control node
+      fetch:
+        src: /app/backup.sql
+        dest: /ansible/backup.sql
+        flat: yes
