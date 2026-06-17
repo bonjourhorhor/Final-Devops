@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Card Manager – Dashboard</title>
+    <meta name="description" content="Manage student and employee ID cards with live preview, PDF export, QR codes, and barcodes.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<!-- ═══════════════════════════════ NAVBAR ═══════════════════════════════ -->
+<nav class="navbar">
+    <div class="nav-brand">
+        <div class="nav-logo">🪪</div>
+        <span class="nav-title">ID<span class="accent">Card</span> Manager</span>
+    </div>
+    <div class="nav-actions">
+        <a th:href="@{/profiles/new}" class="btn btn-primary">
+            <span>＋</span> New Profile
+        </a>
+    </div>
+</nav>
+
+<!-- ═══════════════════════════════ HERO ════════════════════════════════ -->
+<div class="page-container">
+
+    <!-- Flash messages -->
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}"   class="alert alert-error"   th:text="${error}"></div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <div class="stat-value" th:text="${#lists.size(profiles)}">0</div>
+                <div class="stat-label">Total Profiles</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🎓</div>
+            <div class="stat-info">
+                <div class="stat-value" th:text="${#lists.size(profiles.?[type.name() == 'STUDENT'])}">0</div>
+                <div class="stat-label">Students</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💼</div>
+            <div class="stat-info">
+                <div class="stat-value" th:text="${#lists.size(profiles.?[type.name() == 'EMPLOYEE'])}">0</div>
+                <div class="stat-label">Employees</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter bar -->
+    <div class="filter-bar">
+        <form method="get" th:action="@{/}" class="search-form">
+            <div class="search-group">
+                <span class="search-icon">🔍</span>
+                <input type="text" name="search" id="search-input"
+                       th:value="${search}" placeholder="Search by name or registration number…"
+                       class="search-input" autocomplete="off">
+            </div>
+            <select name="type" id="type-filter" class="select-input" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                <option th:each="pt : ${profileTypes}"
+                        th:value="${pt.name()}"
+                        th:text="${pt.name()}"
+                        th:selected="${selectedType == pt.name()}">
+                </option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            <a th:href="@{/}" class="btn btn-ghost">Clear</a>
+        </form>
+    </div>
+
+    <!-- Profile Grid -->
+    <div th:if="${#lists.isEmpty(profiles)}" class="empty-state">
+        <div class="empty-icon">🪪</div>
+        <h2>No Profiles Found</h2>
+        <p>Get started by creating your first ID card profile.</p>
+        <a th:href="@{/profiles/new}" class="btn btn-primary">Create First Profile</a>
+    </div>
+
+    <div class="profiles-grid" th:unless="${#lists.isEmpty(profiles)}">
+        <div th:each="profile : ${profiles}" class="profile-card" th:data-type="${profile.type.name()}">
+            <!-- Card header colour band from template -->
+            <div class="card-header-band"
+                 th:style="'background: linear-gradient(135deg, '
+                    + (profile.template != null ? profile.template.primaryColor : '#1d4ed8')
+                    + ', '
+                    + (profile.template != null ? profile.template.secondaryColor : '#3b82f6')
+                    + ')'">
+                <div class="card-type-badge" th:text="${profile.type.name()}"></div>
+            </div>
+
+            <div class="card-body">
+                <!-- Avatar / Photo -->
+                <div class="card-avatar-wrap">
+                    <img th:if="${profile.photoFileName != null}"
+                         th:src="@{/uploads/photos/{f}(f=${profile.photoFileName})}"
+                         class="card-avatar" alt="Profile Photo">
+                    <div th:unless="${profile.photoFileName != null}" class="card-avatar-placeholder">
+                        <span th:text="${#strings.substring(profile.fullName, 0, 1)}">?</span>
+                    </div>
+                </div>
+
+                <h3 class="card-name" th:text="${profile.fullName}">Full Name</h3>
+                <p class="card-reg"  th:text="${profile.registrationNumber}">REG-000</p>
+                <p class="card-dept" th:if="${profile.department}" th:text="${profile.department}"></p>
+                <p class="card-title" th:if="${profile.title}" th:text="${profile.title}"></p>
+            </div>
+
+            <div class="card-footer">
+                <a th:href="@{/profiles/{id}(id=${profile.id})}" class="btn btn-sm btn-outline">View</a>
+                <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-sm btn-ghost">Edit</a>
+                <a th:href="@{/api/profiles/{id}/pdf(id=${profile.id})}"
+                   target="_blank" class="btn btn-sm btn-primary" title="Download PDF">📄</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch actions FAB -->
+<div class="batch-fab" title="Batch Generate PDFs" onclick="showBatchModal()">📦</div>
+
+<!-- Batch modal -->
+<div class="modal-overlay" id="batch-modal" onclick="hideBatchModal(event)">
+    <div class="modal-box">
+        <h3>Batch PDF Generation</h3>
+        <p>Generate ID card PDFs for a whole group at once.</p>
+        <div class="batch-actions">
+            <a th:href="@{/api/profiles/batch/pdf/type/STUDENT}" target="_blank" class="btn btn-secondary">
+                🎓 All Students PDF
+            </a>
+            <a th:href="@{/api/profiles/batch/pdf/type/EMPLOYEE}" target="_blank" class="btn btn-secondary">
+                💼 All Employees PDF
+            </a>
+        </div>
+        <button class="btn btn-ghost" onclick="hideBatchModal(event)">Close</button>
+    </div>
+</div>
+
+<script th:src="@{/js/preview.js}"></script>
+<script>
+function showBatchModal() {
+    document.getElementById('batch-modal').classList.add('active');
+}
+function hideBatchModal(e) {
+    if (e.target === document.getElementById('batch-modal') || e.currentTarget.tagName === 'BUTTON') {
+        document.getElementById('batch-modal').classList.remove('active');
+    }
+}
+</script>
+</body>
+</html>

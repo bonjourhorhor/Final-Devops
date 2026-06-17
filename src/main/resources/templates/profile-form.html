@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit} ? 'Edit Profile – ID Card Manager' : 'New Profile – ID Card Manager'">
+        New Profile – ID Card Manager
+    </title>
+    <meta name="description" content="Create or edit an ID card profile with live preview.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">
+        <div class="nav-logo">🪪</div>
+        <span class="nav-title">ID<span class="accent">Card</span> Manager</span>
+    </div>
+    <div class="nav-actions">
+        <a th:href="@{/}" class="btn btn-ghost">← Dashboard</a>
+    </div>
+</nav>
+
+<div class="page-container form-page">
+
+    <!-- Flash messages -->
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="form-layout">
+        <!-- ═══ FORM PANEL ═══════════════════════════════════════════════ -->
+        <div class="form-panel">
+            <div class="panel-header">
+                <h1 th:text="${isEdit} ? 'Edit Profile' : 'Create New Profile'">Create Profile</h1>
+                <p>Fill in the details below. The live preview updates instantly.</p>
+            </div>
+
+            <form id="profile-form"
+                  th:action="${isEdit} ? @{/profiles/{id}/edit(id=${profile.id})} : @{/profiles/new}"
+                  method="post" enctype="multipart/form-data" class="id-form">
+
+                <!-- Personal Info -->
+                <div class="form-section">
+                    <div class="form-section-title">Personal Information</div>
+
+                    <div class="form-group">
+                        <label for="fullName">Full Name <span class="required">*</span></label>
+                        <input type="text" id="fullName" name="fullName"
+                               th:value="${profile.fullName}"
+                               placeholder="e.g. John Doe" required
+                               oninput="updatePreview()">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="type">Profile Type <span class="required">*</span></label>
+                            <select id="type" name="type" required onchange="updatePreview()">
+                                <option value="">Select type…</option>
+                                <option th:each="pt : ${profileTypes}"
+                                        th:value="${pt.name()}"
+                                        th:text="${pt.name()}"
+                                        th:selected="${profile.type != null and profile.type.name() == pt.name()}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="department">Department / Faculty</label>
+                            <input type="text" id="department" name="department"
+                                   th:value="${profile.department}"
+                                   placeholder="e.g. Computer Science"
+                                   oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="title">Title / Position / Class</label>
+                            <input type="text" id="title" name="title"
+                                   th:value="${profile.title}"
+                                   placeholder="e.g. Software Engineer"
+                                   oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="bloodGroup">Blood Group</label>
+                            <input type="text" id="bloodGroup" name="bloodGroup"
+                                   th:value="${profile.bloodGroup}"
+                                   placeholder="e.g. O+"
+                                   oninput="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="form-section">
+                    <div class="form-section-title">Contact Information</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email"
+                                   th:value="${profile.email}"
+                                   placeholder="john@example.com"
+                                   oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone</label>
+                            <input type="tel" id="phone" name="phone"
+                                   th:value="${profile.phone}"
+                                   placeholder="+855 12 345 678"
+                                   oninput="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Photo Upload -->
+                <div class="form-section">
+                    <div class="form-section-title">Profile Photo</div>
+                    <div class="photo-upload-zone" id="photo-zone" onclick="document.getElementById('photo').click()">
+                        <div class="upload-placeholder" id="upload-placeholder">
+                            <div class="upload-icon">📸</div>
+                            <p>Click or drag to upload photo</p>
+                            <small>JPEG or PNG, max 5 MB</small>
+                        </div>
+                        <img id="photo-preview-img" class="upload-preview" style="display:none;" alt="Photo preview">
+                    </div>
+                    <input type="file" id="photo" name="photo" accept="image/jpeg,image/png"
+                           style="display:none;" onchange="handlePhotoChange(this)">
+                    <!-- Show existing photo in edit mode -->
+                    <div th:if="${isEdit and profile.photoFileName != null}" class="existing-photo">
+                        <small>Current photo:</small>
+                        <img th:src="@{/uploads/photos/{f}(f=${profile.photoFileName})}"
+                             class="existing-thumb" alt="Current photo">
+                    </div>
+                </div>
+
+                <!-- Submit buttons -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <span th:text="${isEdit} ? '💾 Save Changes' : '✨ Create Profile'">Create Profile</span>
+                    </button>
+                    <a th:href="${isEdit} ? @{/profiles/{id}(id=${profile.id})} : @{/}" class="btn btn-ghost btn-lg">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- ═══ LIVE PREVIEW PANEL ═══════════════════════════════════════ -->
+        <div class="preview-panel">
+            <div class="preview-panel-header">
+                <span>Live Preview</span>
+                <span class="preview-badge pulse">● LIVE</span>
+            </div>
+
+            <div class="id-card-preview" id="live-card">
+                <!-- Card header -->
+                <div class="preview-header" id="prev-header">
+                    <div class="preview-org" id="prev-org">ITC Institution</div>
+                    <div class="preview-tagline">Excellence in Education</div>
+                    <div class="preview-type-badge" id="prev-type">EMPLOYEE ID CARD</div>
+                </div>
+
+                <!-- Card body -->
+                <div class="preview-body">
+                    <div class="preview-photo-wrap">
+                        <img id="prev-photo" class="preview-photo" style="display:none;" alt="Preview">
+                        <div id="prev-photo-placeholder" class="preview-photo-placeholder">
+                            <span id="prev-initials">?</span>
+                        </div>
+                    </div>
+                    <div class="preview-info">
+                        <div class="prev-name" id="prev-name">Your Full Name</div>
+                        <div class="prev-title" id="prev-title"></div>
+                        <div class="prev-field" id="prev-dept"></div>
+                        <div class="prev-field" id="prev-email"></div>
+                        <div class="prev-field" id="prev-phone"></div>
+                        <div class="prev-field" id="prev-blood"></div>
+                    </div>
+                </div>
+
+                <!-- Card footer -->
+                <div class="preview-footer" id="prev-footer">
+                    <div class="prev-reg" id="prev-reg">REG: ----</div>
+                    <div class="prev-qr">
+                        <div class="qr-placeholder">QR</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-hint">
+                <small>The final PDF will include your photo, QR code, and barcode.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/preview.js}"></script>
+</body>
+</html>

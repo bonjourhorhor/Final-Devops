@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${profile.fullName} + ' – ID Card Manager'">Profile – ID Card Manager</title>
+    <meta name="description" th:content="'View ID card details for ' + ${profile.fullName}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">
+        <div class="nav-logo">🪪</div>
+        <span class="nav-title">ID<span class="accent">Card</span> Manager</span>
+    </div>
+    <div class="nav-actions">
+        <a th:href="@{/}" class="btn btn-ghost">← Dashboard</a>
+        <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-secondary">✏️ Edit</a>
+    </div>
+</nav>
+
+<div class="page-container view-page">
+
+    <!-- Flash messages -->
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+    <div class="view-layout">
+
+        <!-- ═══ ID CARD DISPLAY ══════════════════════════════════════════ -->
+        <div class="view-card-panel">
+            <div class="panel-header">
+                <h1>ID Card Preview</h1>
+                <div class="card-actions">
+                    <a th:href="@{/api/profiles/{id}/pdf(id=${profile.id})}"
+                       target="_blank" class="btn btn-primary" id="download-pdf-btn">
+                        📄 Download PDF
+                    </a>
+                    <a th:href="@{/api/profiles/{id}/qrcode(id=${profile.id})}"
+                       target="_blank" class="btn btn-secondary" id="view-qr-btn">
+                        🔲 View QR Code
+                    </a>
+                </div>
+            </div>
+
+            <!-- The visual ID card -->
+            <div class="id-card-preview static-card"
+                 th:style="'--primary: ' + (${profile.template} != null ? ${profile.template.primaryColor} : '#1d4ed8')
+                         + '; --secondary: ' + (${profile.template} != null ? ${profile.template.secondaryColor} : '#dbeafe')
+                         + '; --text-col: ' + (${profile.template} != null ? ${profile.template.textColor} : '#1e3a5f')">
+
+                <!-- Header -->
+                <div class="preview-header static">
+                    <div class="preview-org"
+                         th:text="${profile.template != null and profile.template.organizationName != null}
+                                  ? ${profile.template.organizationName} : 'ITC Institution'">
+                        ITC Institution
+                    </div>
+                    <div class="preview-tagline"
+                         th:text="${profile.template != null and profile.template.tagline != null}
+                                  ? ${profile.template.tagline} : 'Excellence in Education'">
+                    </div>
+                    <div class="preview-type-badge" th:text="${profile.type.name()} + ' ID CARD'">ID CARD</div>
+                </div>
+
+                <!-- Body -->
+                <div class="preview-body">
+                    <div class="preview-photo-wrap">
+                        <img th:if="${profile.photoFileName != null}"
+                             th:src="@{/uploads/photos/{f}(f=${profile.photoFileName})}"
+                             class="preview-photo" alt="Profile Photo">
+                        <div th:unless="${profile.photoFileName != null}" class="preview-photo-placeholder">
+                            <span th:text="${#strings.substring(profile.fullName,0,1)}">?</span>
+                        </div>
+                    </div>
+
+                    <div class="preview-info">
+                        <div class="prev-name" th:text="${profile.fullName}">Full Name</div>
+                        <div class="prev-title" th:text="${profile.title}"></div>
+                        <div class="prev-field" th:if="${profile.department}"
+                             th:text="'DEPT: ' + ${profile.department}"></div>
+                        <div class="prev-field" th:if="${profile.email}"
+                             th:text="'EMAIL: ' + ${profile.email}"></div>
+                        <div class="prev-field" th:if="${profile.phone}"
+                             th:text="'PHONE: ' + ${profile.phone}"></div>
+                        <div class="prev-field" th:if="${profile.bloodGroup}"
+                             th:text="'BLOOD: ' + ${profile.bloodGroup}"></div>
+                        <div class="prev-field" th:if="${profile.dateOfBirth}"
+                             th:text="'DOB: ' + ${#temporals.format(profile.dateOfBirth,'dd/MM/yyyy')}"></div>
+                    </div>
+                </div>
+
+                <!-- Footer strip -->
+                <div class="preview-footer static">
+                    <div class="prev-reg" th:text="'ID: ' + ${profile.registrationNumber}">ID: ---</div>
+                    <div class="prev-expiry"
+                         th:text="${profile.expiryDate != null} ? 'Valid: ' + ${#temporals.format(profile.expiryDate,'dd/MM/yyyy')} : 'No Expiry'">
+                    </div>
+                </div>
+
+                <!-- QR Code inline -->
+                <div class="preview-codes">
+                    <div class="qr-embed">
+                        <img th:src="@{/api/profiles/{id}/qrcode(id=${profile.id})}"
+                             alt="QR Code" class="qr-embed-img"
+                             onerror="this.style.display='none'">
+                        <small>Scan to verify</small>
+                    </div>
+                    <div class="barcode-embed">
+                        <div class="barcode-placeholder">
+                            <div class="barcode-lines"></div>
+                        </div>
+                        <small th:text="${profile.registrationNumber}"></small>
+                        <small th:text="'(' + (profile.barcodeType != null ? profile.barcodeType.name() : 'CODE_128') + ')'"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ PROFILE DETAILS PANEL ════════════════════════════════════ -->
+        <div class="view-details-panel">
+            <div class="panel-header">
+                <h2>Profile Details</h2>
+            </div>
+
+            <div class="details-grid">
+                <div class="detail-item">
+                    <div class="detail-label">Registration Number</div>
+                    <div class="detail-value reg-badge" th:text="${profile.registrationNumber}"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">UUID</div>
+                    <div class="detail-value uuid-val" th:text="${profile.uuid}"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Type</div>
+                    <div class="detail-value">
+                        <span class="type-badge" th:text="${profile.type.name()}"></span>
+                    </div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Full Name</div>
+                    <div class="detail-value" th:text="${profile.fullName}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.department}">
+                    <div class="detail-label">Department</div>
+                    <div class="detail-value" th:text="${profile.department}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.title}">
+                    <div class="detail-label">Title / Position</div>
+                    <div class="detail-value" th:text="${profile.title}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.email}">
+                    <div class="detail-label">Email</div>
+                    <div class="detail-value" th:text="${profile.email}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.phone}">
+                    <div class="detail-label">Phone</div>
+                    <div class="detail-value" th:text="${profile.phone}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.bloodGroup}">
+                    <div class="detail-label">Blood Group</div>
+                    <div class="detail-value" th:text="${profile.bloodGroup}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.dateOfBirth}">
+                    <div class="detail-label">Date of Birth</div>
+                    <div class="detail-value" th:text="${#temporals.format(profile.dateOfBirth,'dd MMMM yyyy')}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.issueDate}">
+                    <div class="detail-label">Issue Date</div>
+                    <div class="detail-value" th:text="${#temporals.format(profile.issueDate,'dd MMMM yyyy')}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.expiryDate}">
+                    <div class="detail-label">Expiry Date</div>
+                    <div class="detail-value" th:text="${#temporals.format(profile.expiryDate,'dd MMMM yyyy')}"></div>
+                </div>
+                <div class="detail-item" th:if="${profile.template}">
+                    <div class="detail-label">Template</div>
+                    <div class="detail-value" th:text="${profile.template.name}"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Barcode Type</div>
+                    <div class="detail-value" th:text="${profile.barcodeType != null ? profile.barcodeType.name() : 'CODE_128'}"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Created</div>
+                    <div class="detail-value" th:text="${#temporals.format(profile.createdAt,'dd MMM yyyy HH:mm')}"></div>
+                </div>
+            </div>
+
+            <!-- Danger zone -->
+            <div class="danger-zone">
+                <h4>Danger Zone</h4>
+                <form th:action="@{/profiles/{id}/delete(id=${profile.id})}" method="post"
+                      onsubmit="return confirm('Are you sure you want to delete this profile? This action cannot be undone.')">
+                    <button type="submit" class="btn btn-danger" id="delete-profile-btn">🗑️ Delete Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/preview.js}"></script>
+</body>
+</html>
